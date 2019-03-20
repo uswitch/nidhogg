@@ -7,6 +7,7 @@ import (
 	"reflect"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -46,8 +47,11 @@ func (h *Handler) HandleNode(instance *corev1.Node) (reconcile.Result, error) {
 	if !reflect.DeepEqual(copy, instance) {
 		instance = copy
 		log.Printf("Updating Node %s\n", instance.Name)
-		h.recorder.Eventf(instance, corev1.EventTypeNormal, "TaintsChanged", "Taints updated to %s", instance.Spec.Taints)
 		err = h.Update(context.TODO(), instance)
+		// this is a hack to make the event work on a non-namespaced object
+		copy.UID = types.UID(copy.Name)
+
+		h.recorder.Eventf(copy, corev1.EventTypeNormal, "TaintsChanged", "Taints updated to %s", copy.Spec.Taints)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
