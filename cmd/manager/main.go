@@ -16,11 +16,14 @@ limitations under the License.
 package main
 
 import (
+	"encoding/json"
 	"flag"
+	"io/ioutil"
 	"os"
 
 	"github.com/uswitch/nidhogg/pkg/apis"
 	"github.com/uswitch/nidhogg/pkg/controller"
+	"github.com/uswitch/nidhogg/pkg/nidhogg"
 	"github.com/uswitch/nidhogg/pkg/webhook"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -31,10 +34,26 @@ import (
 
 func main() {
 	var metricsAddr string
+	var configPath string
 	flag.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
+	flag.StringVar(&configPath, "config-file", "config.json", "Path to config file")
 	flag.Parse()
 	logf.SetLogger(logf.ZapLogger(false))
 	log := logf.Log.WithName("entrypoint")
+
+	var handlerConf nidhogg.HandlerConfig
+
+	bytes, err := ioutil.ReadFile(configPath)
+	if err != nil {
+		log.Error(err, "unable to read config file")
+		os.Exit(1)
+	}
+
+	err = json.Unmarshal(bytes, &handlerConf)
+	if err != nil {
+		log.Error(err, "unable to parse config file")
+		os.Exit(1)
+	}
 
 	// Get a config to talk to the apiserver
 	log.Info("setting up client for manager")
@@ -63,7 +82,7 @@ func main() {
 
 	// Setup all Controllers
 	log.Info("Setting up controller")
-	if err := controller.AddToManager(mgr); err != nil {
+	if err := controller.AddToManager(mgr, handlerConf); err != nil {
 		log.Error(err, "unable to register controllers to the manager")
 		os.Exit(1)
 	}

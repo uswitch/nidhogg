@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/onsi/gomega"
+	"github.com/uswitch/nidhogg/pkg/nidhogg"
 	"golang.org/x/net/context"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -46,7 +47,7 @@ func TestReconcile(t *testing.T) {
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 	c = mgr.GetClient()
 
-	recFn, requests := SetupTestReconcile(newReconciler(mgr))
+	recFn, requests := SetupTestReconcile(newReconciler(mgr, nidhogg.HandlerConfig{}))
 	g.Expect(add(mgr, recFn)).NotTo(gomega.HaveOccurred())
 
 	stopMgr, mgrStopped := StartTestManager(mgr, g)

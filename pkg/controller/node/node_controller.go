@@ -30,20 +30,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-/**
-* USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
-* business logic.  Delete these comments after modifying this file.*
- */
-
 // Add creates a new Node Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
-func Add(mgr manager.Manager) error {
-	return add(mgr, newReconciler(mgr))
+func Add(mgr manager.Manager, cfg nidhogg.HandlerConfig) error {
+	return add(mgr, newReconciler(mgr, cfg))
 }
 
 // newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileNode{handler: nidhogg.NewHandler(mgr.GetClient(), mgr.GetRecorder("nidhogg")), scheme: mgr.GetScheme()}
+func newReconciler(mgr manager.Manager, cfg nidhogg.HandlerConfig) reconcile.Reconciler {
+	return &ReconcileNode{handler: nidhogg.NewHandler(mgr.GetClient(), mgr.GetRecorder("nidhogg"), cfg), scheme: mgr.GetScheme()}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -81,8 +76,6 @@ type ReconcileNode struct {
 
 // Reconcile reads that state of the cluster for a Node object and makes changes based on the state read
 // and what is in the Node.Spec
-// TODO(user): Modify this Reconcile function to implement your Controller logic.  The scaffolding writes
-// a Deployment as an example
 // +kubebuilder:rbac:groups=core,resources=nodes,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=nodes/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch
