@@ -1,0 +1,35 @@
+workspace:
+  base: /go
+  path: src/github.com/uswitch/nidhogg
+
+pipeline:
+  test:
+    image: golang:1.10
+    commands:
+      - curl -L -O "https://github.com/kubernetes-sigs/kubebuilder/releases/download/v1.0.8/kubebuilder_1.0.8_linux_amd64.tar.gz"
+      - tar -zxvf kubebuilder_1.0.8_linux_amd64.tar.gz
+      - mv kubebuilder_1.0.8_linux_amd64 kubebuilder && mv kubebuilder /usr/local/
+      - make test
+
+  docker-latest:
+    image: plugins/docker
+    repo: quay.io/uswitch/nidhogg
+    registry: quay.io
+    secrets: [ docker_username, docker_password ]
+    tags:
+      - ${DRONE_COMMIT_SHA}
+      - latest
+    when:
+      event: push
+      branch: master
+
+  docker-tagged:
+    image: plugins/docker
+    repo: quay.io/uswitch/nidhogg
+    registry: quay.io
+    secrets: [ docker_username, docker_password ]
+    tags:
+      - ${DRONE_TAG}
+    when:
+      event: tag
+      branch: master
