@@ -2,7 +2,7 @@
 
 Nidhogg is a controller that taints nodes based on whether a Pod from a specific Daemonset is running on them.
 
-Sometimes you have a Daemonset that is so important that you don't want other pods to run on your node until that Daemonset is up and running on the node. Nidhogg solves this problem by tainting the node until this your daemonset pod is ready, preventing pods that don't tolerate the taint from scheduling there.
+Sometimes you have a Daemonset that is so important that you don't want other pods to run on your node until that Daemonset is up and running on the node. Nidhogg solves this problem by tainting the node until your Daemonset pod is ready, preventing pods that don't tolerate the taint from scheduling there.
 
 Nidhogg was built using [Kubebuilder](https://github.com/kubernetes-sigs/kubebuilder)
 
