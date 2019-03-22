@@ -1,0 +1,11 @@
+{
+  "nodeSelector": {
+    "node-role.kubernetes.io/master": ""
+  },
+  "daemonsets": [
+    {
+      "name": "kiam",
+      "namespace": "kube-system"
+    }
+  ]
+}
