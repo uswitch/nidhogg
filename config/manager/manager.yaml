@@ -47,6 +47,8 @@ spec:
         image: controller:latest
         imagePullPolicy: Always
         name: manager
+        args:
+         - --config-file=/config/config.json
         env:
           - name: POD_NAMESPACE
             valueFrom:
@@ -69,15 +71,41 @@ spec:
         - mountPath: /tmp/cert
           name: cert
           readOnly: true
+        - mountPath: /config
+          name: config
+          readOnly: true
       terminationGracePeriodSeconds: 10
       volumes:
       - name: cert
         secret:
           defaultMode: 420
           secretName: webhook-server-secret
+      - name: config
+        configMap:
+          defaultMode: 420
+          name: config
 ---
 apiVersion: v1
 kind: Secret
 metadata:
   name: webhook-server-secret
   namespace: system
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config
+  namespace: system
+data:
+  config.json: |
+     {
+       "nodeSelector": {
+         "node-role.kubernetes.io/master": ""
+       },
+       "daemonsets": [
+         {
+           "name": "kiam",
+           "namespace": "kube-system"
+         }
+       ]
+     }
