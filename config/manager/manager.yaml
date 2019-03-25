@@ -30,6 +30,7 @@ metadata:
     control-plane: controller-manager
     controller-tools.k8s.io: "1.0"
 spec:
+  replicas: 2
   selector:
     matchLabels:
       control-plane: controller-manager
@@ -49,6 +50,9 @@ spec:
         name: manager
         args:
          - --config-file=/config/config.json
+         - --leader-election
+         - --leader-namespace=nidhogg-system
+         - --leader-configmap=nidhogg-election
         env:
           - name: POD_NAMESPACE
             valueFrom:

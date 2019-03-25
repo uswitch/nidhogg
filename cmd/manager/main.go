@@ -30,11 +30,21 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
 )
 
+var (
+	metricsAddr     string
+	configPath      string
+	leaderElection  bool
+	leaderConfigMap string
+	leaderNamespace string
+)
+
 func main() {
-	var metricsAddr string
-	var configPath string
+
 	flag.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&configPath, "config-file", "config.json", "Path to config file")
+	flag.BoolVar(&leaderElection, "leader-election", false, "enable leader election")
+	flag.StringVar(&leaderConfigMap, "leader-configmap", "", "Name of configmap to use for leader election")
+	flag.StringVar(&leaderNamespace, "leader-namespace", "", "Namespace where leader configmap located")
 	flag.Parse()
 	logf.SetLogger(logf.ZapLogger(false))
 	log := logf.Log.WithName("entrypoint")
@@ -55,7 +65,12 @@ func main() {
 
 	// Create a new Cmd to provide shared dependencies and start components
 	log.Info("setting up manager")
-	mgr, err := manager.New(cfg, manager.Options{MetricsBindAddress: metricsAddr})
+	mgr, err := manager.New(cfg, manager.Options{
+		MetricsBindAddress:      metricsAddr,
+		LeaderElection:          leaderElection,
+		LeaderElectionID:        leaderConfigMap,
+		LeaderElectionNamespace: leaderNamespace,
+	})
 	if err != nil {
 		log.Error(err, "unable to set up overall controller manager")
 		os.Exit(1)
