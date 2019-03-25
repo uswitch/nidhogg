@@ -8,10 +8,20 @@ Nidhogg was built using [Kubebuilder](https://github.com/kubernetes-sigs/kubebui
 
 ## Usage
 
-Nidhogg requires a json config file to tell it what Daemonsets to watch and what nodes to act on.
+Nidhogg requires a yaml/json config file to tell it what Daemonsets to watch and what nodes to act on.
 `nodeSelector` is a map of keys/values corresponding to node labels. `daemonsets` is an array of Daemonsets to watch, each containing two fields `name` and `namespace`. Nodes are tainted with taint that follows the format of `nidhogg.uswitch.com/namespace.name:NoSchedule`.
 
 Example:
+
+YAML:
+```yaml
+nodeSelector:
+  node-role.kubernetes.io/node: ""
+daemonsets:
+  - name: kiam
+    namespace: kube-system  
+```
+JSON:
 
 ```json
 {

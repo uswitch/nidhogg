@@ -16,9 +16,7 @@ limitations under the License.
 package main
 
 import (
-	"encoding/json"
 	"flag"
-	"io/ioutil"
 	"os"
 
 	"github.com/uswitch/nidhogg/pkg/apis"
@@ -41,17 +39,9 @@ func main() {
 	logf.SetLogger(logf.ZapLogger(false))
 	log := logf.Log.WithName("entrypoint")
 
-	var handlerConf nidhogg.HandlerConfig
-
-	bytes, err := ioutil.ReadFile(configPath)
+	handlerConf, err := nidhogg.GetConfig(configPath)
 	if err != nil {
-		log.Error(err, "unable to read config file")
-		os.Exit(1)
-	}
-
-	err = json.Unmarshal(bytes, &handlerConf)
-	if err != nil {
-		log.Error(err, "unable to parse config file")
+		log.Error(err, "unable to get config")
 		os.Exit(1)
 	}
 
