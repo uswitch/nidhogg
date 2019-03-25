@@ -14,6 +14,8 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
+const taintKey = "nidhogg.uswitch.com"
+
 // Handler performs the main business logic of the Wave controller
 type Handler struct {
 	client.Client
@@ -33,6 +35,11 @@ type Daemonset struct {
 	Namespace string `json:"namespace"`
 }
 
+type taintChanges struct {
+	taintsAdded   []string
+	taintsRemoved []string
+}
+
 // NewHandler constructs a new instance of Handler
 func NewHandler(c client.Client, r record.EventRecorder, conf HandlerConfig) *Handler {
 	return &Handler{Client: c, recorder: r, config: conf}
@@ -49,40 +56,54 @@ func (h *Handler) HandleNode(instance *corev1.Node) (reconcile.Result, error) {
 		return reconcile.Result{}, nil
 	}
 
-	copy := instance.DeepCopy()
-
-	for _, daemonset := range h.config.Daemonsets {
-		taintName := daemonset.Name + "-not-ready"
-		// Get Pod for node
-		pod, err := h.getDaemonsetPod(instance.Name, daemonset)
-		if err != nil {
-			return reconcile.Result{}, fmt.Errorf("error fetching pods: %v", err)
-		}
-
-		if pod == nil || podNotReady(pod) {
-			if !taintPresent(copy, taintName) {
-				copy.Spec.Taints = addTaint(copy.Spec.Taints, taintName)
-			}
-		} else {
-			copy.Spec.Taints = removeTaint(copy.Spec.Taints, taintName)
-		}
-
+	copy, taintChanges, err := h.caclulateTaints(instance)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("error caluclating taints for node: %v", err)
 	}
 
 	if !reflect.DeepEqual(copy, instance) {
 		instance = copy
-		log.Info("Updating Node taints", "instance", instance.Name, "taints", instance.Spec.Taints)
+		log.Info("Updating Node taints", "instance", instance.Name, "taints added", taintChanges.taintsAdded, "taints removed", taintChanges.taintsRemoved)
 		err := h.Update(context.TODO(), instance)
 		// this is a hack to make the event work on a non-namespaced object
 		copy.UID = types.UID(copy.Name)
 
-		h.recorder.Eventf(copy, corev1.EventTypeNormal, "TaintsChanged", "Taints updated to %s", copy.Spec.Taints)
+		h.recorder.Eventf(copy, corev1.EventTypeNormal, "TaintsChanged", "Taints added: %s, Taints removed: %s", taintChanges.taintsAdded, taintChanges.taintsRemoved)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
 	}
 
 	return reconcile.Result{}, nil
+}
+
+func (h *Handler) caclulateTaints(instance *corev1.Node) (*corev1.Node, taintChanges, error) {
+
+	copy := instance.DeepCopy()
+
+	var changes taintChanges
+
+	for _, daemonset := range h.config.Daemonsets {
+
+		taint := fmt.Sprintf("%s/%s.%s", taintKey, daemonset.Namespace, daemonset.Name)
+		// Get Pod for node
+		pod, err := h.getDaemonsetPod(instance.Name, daemonset)
+		if err != nil {
+			return nil, taintChanges{}, fmt.Errorf("error fetching pods: %v", err)
+		}
+
+		if pod == nil || podNotReady(pod) {
+			if !taintPresent(copy, taint) {
+				copy.Spec.Taints = addTaint(copy.Spec.Taints, taint)
+				changes.taintsAdded = append(changes.taintsAdded, taint)
+			}
+		} else if taintPresent(copy, taint) {
+			copy.Spec.Taints = removeTaint(copy.Spec.Taints, taint)
+			changes.taintsRemoved = append(changes.taintsRemoved, taint)
+		}
+
+	}
+	return copy, changes, nil
 }
 
 func (h *Handler) getDaemonsetPod(nodeName string, ds Daemonset) (*corev1.Pod, error) {
