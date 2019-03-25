@@ -9,7 +9,7 @@ Nidhogg was built using [Kubebuilder](https://github.com/kubernetes-sigs/kubebui
 ## Usage
 
 Nidhogg requires a json config file to tell it what Daemonsets to watch and what nodes to act on.
-`nodeSelector` is a map of keys/values corresponding to node labels. `daemonsets` is an array of Daemonsets to watch, each containing two fields `name` and `namespace`. Nodes are tainted with taint that follows the format of `<daemonset-name>-not-ready:NoSchedule`.
+`nodeSelector` is a map of keys/values corresponding to node labels. `daemonsets` is an array of Daemonsets to watch, each containing two fields `name` and `namespace`. Nodes are tainted with taint that follows the format of `nidhogg.uswitch.com=namespace.name:NoSchedule`.
 
 Example:
 
@@ -27,7 +27,27 @@ Example:
 }
 ```
 This example will taint any nodes that have the label `node-role.kubernetes.io/node=""` if they do not have a running and ready pod from the `kiam` daemonset in the `kube-system` namespace.
-It will add a taint of `kiam-not-ready:NoSchedule` until there is a ready kiam pod on the node.
+It will add a taint of `nidhogg.uswitch.com=kube-system.kiam:NoSchedule` until there is a ready kiam pod on the node.
+
+If you want pods to be able to run on the nidhogg tainted nodes you can add a toleration:
+
+You can either tolerate any nidhogg taints by just using the `Exists` operator:
+```yaml
+spec:
+  tolerations:
+  - key: nidhogg.uswitch.com
+    operator: "Exists"
+    effect: NoSchedule
+```
+Or you can tolerate specific nidhogg taints with the `Equal` operator:
+```yaml
+spec:
+  tolerations:
+  - key: nidhogg.uswitch.com
+    value: "kube-system.kiam"
+    operator: "Equal"
+    effect: NoSchedule
+```
 
 ## Deploying
 Docker images can be found at https://quay.io/uswitch/nidhogg
