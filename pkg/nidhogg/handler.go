@@ -25,14 +25,14 @@ type Handler struct {
 
 //HandlerConfig contains the options for Nidhogg
 type HandlerConfig struct {
-	Daemonsets   []Daemonset       `json:"daemonsets"`
-	NodeSelector map[string]string `json:"nodeSelector"`
+	Daemonsets   []Daemonset       `json:"daemonsets" yaml:"daemonsets"`
+	NodeSelector map[string]string `json:"nodeSelector" yaml:"nodeSelector"`
 }
 
 //Daemonset contains the name and namespace of a Daemonset
 type Daemonset struct {
-	Name      string `json:"name"`
-	Namespace string `json:"namespace"`
+	Name      string `json:"name" yaml:"name"`
+	Namespace string `json:"namespace" yaml:"namespace"`
 }
 
 type taintChanges struct {
