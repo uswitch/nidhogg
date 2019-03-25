@@ -60,8 +60,14 @@ Example [Kustomize](https://github.com/kubernetes-sigs/kustomize) manifests can 
     Path to config file (default "config.json")
 -kubeconfig string
     Paths to a kubeconfig. Only required if out-of-cluster.
+-leader-configmap string
+    Name of configmap to use for leader election
+-leader-election
+    enable leader election
+-leader-namespace string
+    Namespace where leader configmap located
 -master string
-    The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.
+	The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.
 -metrics-addr string
     The address the metric endpoint binds to. (default ":8080")
 ```
