@@ -85,7 +85,7 @@ func (h *Handler) caclulateTaints(instance *corev1.Node) (*corev1.Node, taintCha
 
 	for _, daemonset := range h.config.Daemonsets {
 
-		taintValue := fmt.Sprintf("%s.%s", daemonset.Namespace, daemonset.Name)
+		taint := fmt.Sprintf("%s/%s.%s", taintKey, daemonset.Namespace, daemonset.Name)
 		// Get Pod for node
 		pod, err := h.getDaemonsetPod(instance.Name, daemonset)
 		if err != nil {
@@ -93,13 +93,13 @@ func (h *Handler) caclulateTaints(instance *corev1.Node) (*corev1.Node, taintCha
 		}
 
 		if pod == nil || podNotReady(pod) {
-			if !taintPresent(copy, taintValue) {
-				copy.Spec.Taints = addTaint(copy.Spec.Taints, taintValue)
-				changes.taintsAdded = append(changes.taintsAdded, taintValue)
+			if !taintPresent(copy, taint) {
+				copy.Spec.Taints = addTaint(copy.Spec.Taints, taint)
+				changes.taintsAdded = append(changes.taintsAdded, taint)
 			}
-		} else if taintPresent(copy, taintValue) {
-			copy.Spec.Taints = removeTaint(copy.Spec.Taints, taintValue)
-			changes.taintsRemoved = append(changes.taintsRemoved, taintValue)
+		} else if taintPresent(copy, taint) {
+			copy.Spec.Taints = removeTaint(copy.Spec.Taints, taint)
+			changes.taintsRemoved = append(changes.taintsRemoved, taint)
 		}
 
 	}
@@ -139,7 +139,7 @@ func podNotReady(pod *corev1.Pod) bool {
 func taintPresent(node *corev1.Node, taintName string) bool {
 
 	for _, taint := range node.Spec.Taints {
-		if taint.Key == taintKey && taint.Value == taintName {
+		if taint.Key == taintName {
 			return true
 		}
 	}
@@ -147,14 +147,14 @@ func taintPresent(node *corev1.Node, taintName string) bool {
 }
 
 func addTaint(taints []corev1.Taint, taintName string) []corev1.Taint {
-	return append(taints, corev1.Taint{Key: taintKey, Value: taintName, Effect: corev1.TaintEffectNoSchedule})
+	return append(taints, corev1.Taint{Key: taintName, Effect: corev1.TaintEffectNoSchedule})
 }
 
 func removeTaint(taints []corev1.Taint, taintName string) []corev1.Taint {
 	newTaints := []corev1.Taint{}
 
 	for _, taint := range taints {
-		if taint.Key == taintKey && taint.Value == taintName {
+		if taint.Key == taintName {
 			continue
 		}
 		newTaints = append(newTaints, taint)
