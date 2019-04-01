@@ -62,11 +62,10 @@ spec:
             value: $(WEBHOOK_SECRET_NAME)
         resources:
           limits:
-            cpu: 100m
-            memory: 30Mi
+            memory: 200Mi
           requests:
             cpu: 100m
-            memory: 20Mi
+            memory: 100Mi
         ports:
         - containerPort: 9876
           name: webhook-server
@@ -104,7 +103,7 @@ data:
   config.json: |
      {
        "nodeSelector": {
-         "node-role.kubernetes.io/master": ""
+         "node-role.kubernetes.io/node": ""
        },
        "daemonsets": [
          {

@@ -65,13 +65,14 @@ func (h *Handler) HandleNode(instance *corev1.Node) (reconcile.Result, error) {
 		instance = copy
 		log.Info("Updating Node taints", "instance", instance.Name, "taints added", taintChanges.taintsAdded, "taints removed", taintChanges.taintsRemoved)
 		err := h.Update(context.TODO(), instance)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+
 		// this is a hack to make the event work on a non-namespaced object
 		copy.UID = types.UID(copy.Name)
 
 		h.recorder.Eventf(copy, corev1.EventTypeNormal, "TaintsChanged", "Taints added: %s, Taints removed: %s", taintChanges.taintsAdded, taintChanges.taintsRemoved)
-		if err != nil {
-			return reconcile.Result{}, err
-		}
 	}
 
 	return reconcile.Result{}, nil
