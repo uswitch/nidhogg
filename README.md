@@ -37,7 +37,7 @@ JSON:
 }
 ```
 This example will taint any nodes that have the label `node-role.kubernetes.io/node=""` if they do not have a running and ready pod from the `kiam` daemonset in the `kube-system` namespace.
-It will add a taint of `nidhogg.uswitch.com/kube-system.kiam:NoSchedule` until there is a ready kiam pod on the node.
+It will add a taint of `nidhogg.uswitch.com=kube-system.kiam:NoSchedule` until there is a ready kiam pod on the node.
 
 If you want pods to be able to run on the nidhogg tainted nodes you can add a toleration:
 
