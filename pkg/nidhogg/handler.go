@@ -5,16 +5,49 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/prometheus/client_golang/prometheus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/metrics"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
-const taintKey = "nidhogg.uswitch.com"
+const (
+	taintKey              = "nidhogg.uswitch.com"
+	taintOperationAdded   = "added"
+	taintOperationRemoved = "removed"
+)
+
+var (
+	taintOperations = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: "taint_operations",
+		Help: "Total number of added/removed taints operations",
+	},
+		[]string{
+			"operation",
+			"taint",
+		},
+	)
+	taintOperationErrors = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: "taint_operation_errors",
+		Help: "Total number of errors during taint operations",
+	},
+		[]string{
+			"operation",
+		},
+	)
+)
+
+func init() {
+	metrics.Registry.MustRegister(
+		taintOperations,
+		taintOperationErrors,
+	)
+}
 
 // Handler performs the main business logic of the Wave controller
 type Handler struct {
@@ -58,6 +91,7 @@ func (h *Handler) HandleNode(instance *corev1.Node) (reconcile.Result, error) {
 
 	copy, taintChanges, err := h.caclulateTaints(instance)
 	if err != nil {
+		taintOperationErrors.WithLabelValues("calculateTaints").Inc()
 		return reconcile.Result{}, fmt.Errorf("error caluclating taints for node: %v", err)
 	}
 
@@ -66,7 +100,14 @@ func (h *Handler) HandleNode(instance *corev1.Node) (reconcile.Result, error) {
 		log.Info("Updating Node taints", "instance", instance.Name, "taints added", taintChanges.taintsAdded, "taints removed", taintChanges.taintsRemoved)
 		err := h.Update(context.TODO(), instance)
 		if err != nil {
+			taintOperationErrors.WithLabelValues("nodeUpdate").Inc()
 			return reconcile.Result{}, err
+		}
+		for _, taintAdded := range taintChanges.taintsAdded {
+			taintOperations.WithLabelValues(taintOperationAdded, taintAdded).Inc()
+		}
+		for _, taintRemoved := range taintChanges.taintsRemoved {
+			taintOperations.WithLabelValues(taintOperationRemoved, taintRemoved).Inc()
 		}
 
 		// this is a hack to make the event work on a non-namespaced object
