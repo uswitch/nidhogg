@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -84,6 +85,14 @@ func (h *Handler) caclulateTaints(instance *corev1.Node) (*corev1.Node, taintCha
 
 	var changes taintChanges
 
+	taintsToRemove := make(map[string]struct{})
+	for _, taint := range copy.Spec.Taints {
+		// we could have some older taints from a different configuration file
+		// storing them all to reconcile from a previous state
+		if strings.HasPrefix(taint.Key, taintKey) {
+			taintsToRemove[taint.Key] = struct{}{}
+		}
+	}
 	for _, daemonset := range h.config.Daemonsets {
 
 		taint := fmt.Sprintf("%s/%s.%s", taintKey, daemonset.Namespace, daemonset.Name)
@@ -93,16 +102,24 @@ func (h *Handler) caclulateTaints(instance *corev1.Node) (*corev1.Node, taintCha
 			return nil, taintChanges{}, fmt.Errorf("error fetching pods: %v", err)
 		}
 
-		if pod == nil || podNotReady(pod) {
-			if !taintPresent(copy, taint) {
-				copy.Spec.Taints = addTaint(copy.Spec.Taints, taint)
-				changes.taintsAdded = append(changes.taintsAdded, taint)
-			}
-		} else if taintPresent(copy, taint) {
-			copy.Spec.Taints = removeTaint(copy.Spec.Taints, taint)
-			changes.taintsRemoved = append(changes.taintsRemoved, taint)
+		if pod != nil && podReady(pod) {
+			// if the taint is in the taintsToRemove map, it'll be removed
+			continue
 		}
-
+		// pod doesn't exist or is not ready
+		_, ok := taintsToRemove[taint]
+		if ok {
+			// we want to keep this already existing taint on it
+			delete(taintsToRemove, taint)
+			continue
+		}
+		// taint is not already present, adding it
+		changes.taintsAdded = append(changes.taintsAdded, taint)
+		copy.Spec.Taints = addTaint(copy.Spec.Taints, taint)
+	}
+	for taint := range taintsToRemove {
+		copy.Spec.Taints = removeTaint(copy.Spec.Taints, taint)
+		changes.taintsRemoved = append(changes.taintsRemoved, taint)
 	}
 	return copy, changes, nil
 }
@@ -128,23 +145,13 @@ func (h *Handler) getDaemonsetPod(nodeName string, ds Daemonset) (*corev1.Pod, e
 	return nil, nil
 }
 
-func podNotReady(pod *corev1.Pod) bool {
+func podReady(pod *corev1.Pod) bool {
 	for _, status := range pod.Status.ContainerStatuses {
 		if status.Ready == false {
-			return true
+			return false
 		}
 	}
-	return false
-}
-
-func taintPresent(node *corev1.Node, taintName string) bool {
-
-	for _, taint := range node.Spec.Taints {
-		if taint.Key == taintName {
-			return true
-		}
-	}
-	return false
+	return true
 }
 
 func addTaint(taints []corev1.Taint, taintName string) []corev1.Taint {
