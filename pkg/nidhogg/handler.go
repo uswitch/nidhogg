@@ -59,13 +59,13 @@ type Handler struct {
 	config   HandlerConfig
 }
 
-//HandlerConfig contains the options for Nidhogg
+// HandlerConfig contains the options for Nidhogg
 type HandlerConfig struct {
 	Daemonsets   []Daemonset       `json:"daemonsets" yaml:"daemonsets"`
 	NodeSelector map[string]string `json:"nodeSelector" yaml:"nodeSelector"`
 }
 
-//Daemonset contains the name and namespace of a Daemonset
+// Daemonset contains the name and namespace of a Daemonset
 type Daemonset struct {
 	Name      string `json:"name" yaml:"name"`
 	Namespace string `json:"namespace" yaml:"namespace"`
@@ -92,14 +92,14 @@ func (h *Handler) HandleNode(instance *corev1.Node) (reconcile.Result, error) {
 		return reconcile.Result{}, nil
 	}
 
-	copy, taintChanges, err := h.caclulateTaints(instance)
+	nodeCopy, taintChanges, err := h.calculateTaints(instance)
 	if err != nil {
 		taintOperationErrors.WithLabelValues("calculateTaints").Inc()
 		return reconcile.Result{}, fmt.Errorf("error caluclating taints for node: %v", err)
 	}
 
 	taintLess := true
-	for _, taint := range copy.Spec.Taints {
+	for _, taint := range nodeCopy.Spec.Taints {
 		if strings.HasPrefix(taint.Key, taintKey) {
 			taintLess = false
 		}
@@ -108,19 +108,19 @@ func (h *Handler) HandleNode(instance *corev1.Node) (reconcile.Result, error) {
 	var firstTimeReady string
 	if taintLess {
 		firstTimeReady = time.Now().Format("2006-01-02T15:04:05Z")
-		if copy.Annotations == nil {
-			copy.Annotations = map[string]string{
+		if nodeCopy.Annotations == nil {
+			nodeCopy.Annotations = map[string]string{
 				annotationFirstTimeReady: firstTimeReady,
 			}
-		} else if _, ok := copy.Annotations[annotationFirstTimeReady]; !ok {
-			copy.Annotations[annotationFirstTimeReady] = firstTimeReady
+		} else if _, ok := nodeCopy.Annotations[annotationFirstTimeReady]; !ok {
+			nodeCopy.Annotations[annotationFirstTimeReady] = firstTimeReady
 		} else {
-			firstTimeReady = copy.Annotations[annotationFirstTimeReady]
+			firstTimeReady = nodeCopy.Annotations[annotationFirstTimeReady]
 		}
 	}
 
-	if !reflect.DeepEqual(copy, instance) {
-		instance = copy
+	if !reflect.DeepEqual(nodeCopy, instance) {
+		instance = nodeCopy
 		log.Info("Updating Node taints", "instance", instance.Name, "taints added", taintChanges.taintsAdded, "taints removed", taintChanges.taintsRemoved, "taintLess", taintLess, "firstTimeReady", firstTimeReady)
 		err := h.Update(context.TODO(), instance)
 		if err != nil {
@@ -135,22 +135,22 @@ func (h *Handler) HandleNode(instance *corev1.Node) (reconcile.Result, error) {
 		}
 
 		// this is a hack to make the event work on a non-namespaced object
-		copy.UID = types.UID(copy.Name)
+		nodeCopy.UID = types.UID(nodeCopy.Name)
 
-		h.recorder.Eventf(copy, corev1.EventTypeNormal, "TaintsChanged", "Taints added: %s, Taints removed: %s, TaintLess: %v, FirstTimeReady: %q", taintChanges.taintsAdded, taintChanges.taintsRemoved, taintLess, firstTimeReady)
+		h.recorder.Eventf(nodeCopy, corev1.EventTypeNormal, "TaintsChanged", "Taints added: %s, Taints removed: %s, TaintLess: %v, FirstTimeReady: %q", taintChanges.taintsAdded, taintChanges.taintsRemoved, taintLess, firstTimeReady)
 	}
 
 	return reconcile.Result{}, nil
 }
 
-func (h *Handler) caclulateTaints(instance *corev1.Node) (*corev1.Node, taintChanges, error) {
+func (h *Handler) calculateTaints(instance *corev1.Node) (*corev1.Node, taintChanges, error) {
 
-	copy := instance.DeepCopy()
+	nodeCopy := instance.DeepCopy()
 
 	var changes taintChanges
 
 	taintsToRemove := make(map[string]struct{})
-	for _, taint := range copy.Spec.Taints {
+	for _, taint := range nodeCopy.Spec.Taints {
 		// we could have some older taints from a different configuration file
 		// storing them all to reconcile from a previous state
 		if strings.HasPrefix(taint.Key, taintKey) {
@@ -179,13 +179,13 @@ func (h *Handler) caclulateTaints(instance *corev1.Node) (*corev1.Node, taintCha
 		}
 		// taint is not already present, adding it
 		changes.taintsAdded = append(changes.taintsAdded, taint)
-		copy.Spec.Taints = addTaint(copy.Spec.Taints, taint)
+		nodeCopy.Spec.Taints = addTaint(nodeCopy.Spec.Taints, taint)
 	}
 	for taint := range taintsToRemove {
-		copy.Spec.Taints = removeTaint(copy.Spec.Taints, taint)
+		nodeCopy.Spec.Taints = removeTaint(nodeCopy.Spec.Taints, taint)
 		changes.taintsRemoved = append(changes.taintsRemoved, taint)
 	}
-	return copy, changes, nil
+	return nodeCopy, changes, nil
 }
 
 func (h *Handler) getDaemonsetPod(nodeName string, ds Daemonset) (*corev1.Pod, error) {
@@ -223,7 +223,7 @@ func addTaint(taints []corev1.Taint, taintName string) []corev1.Taint {
 }
 
 func removeTaint(taints []corev1.Taint, taintName string) []corev1.Taint {
-	newTaints := []corev1.Taint{}
+	var newTaints []corev1.Taint
 
 	for _, taint := range taints {
 		if taint.Key == taintName {
@@ -231,11 +231,5 @@ func removeTaint(taints []corev1.Taint, taintName string) []corev1.Taint {
 		}
 		newTaints = append(newTaints, taint)
 	}
-
-	//empty array != nil
-	if len(newTaints) == 0 {
-		return nil
-	}
-
 	return newTaints
 }
