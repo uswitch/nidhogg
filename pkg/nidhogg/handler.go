@@ -43,12 +43,24 @@ var (
 			"operation",
 		},
 	)
+	taintLessSummary = prometheus.NewSummaryVec(prometheus.SummaryOpts{
+		Name:       "first_time_ready_seconds",
+		Help:       "Quantiles for a node become taint less for the first time in seconds",
+		Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
+		MaxAge:     time.Hour * 8,
+	},
+		[]string{
+			"status",
+			"reason",
+		},
+	)
 )
 
 func init() {
 	metrics.Registry.MustRegister(
 		taintOperations,
 		taintOperationErrors,
+		taintLessSummary,
 	)
 }
 
@@ -107,13 +119,16 @@ func (h *Handler) HandleNode(instance *corev1.Node) (reconcile.Result, error) {
 
 	var firstTimeReady string
 	if taintLess {
-		firstTimeReady = time.Now().Format("2006-01-02T15:04:05Z")
+		now := time.Now()
+		firstTimeReady = now.Format("2006-01-02T15:04:05Z")
 		if copy.Annotations == nil {
 			copy.Annotations = map[string]string{
 				annotationFirstTimeReady: firstTimeReady,
 			}
+			taintLessSummary.WithLabelValues(getNodeReadyCondition(instance)).Observe(now.Sub(instance.CreationTimestamp.Time).Seconds())
 		} else if _, ok := copy.Annotations[annotationFirstTimeReady]; !ok {
 			copy.Annotations[annotationFirstTimeReady] = firstTimeReady
+			taintLessSummary.WithLabelValues(getNodeReadyCondition(instance)).Observe(now.Sub(instance.CreationTimestamp.Time).Seconds())
 		} else {
 			firstTimeReady = copy.Annotations[annotationFirstTimeReady]
 		}
@@ -141,6 +156,16 @@ func (h *Handler) HandleNode(instance *corev1.Node) (reconcile.Result, error) {
 	}
 
 	return reconcile.Result{}, nil
+}
+
+func getNodeReadyCondition(instance *corev1.Node) (string, string) {
+	for _, c := range instance.Status.Conditions {
+		if c.Type == corev1.NodeReady {
+			return string(c.Status), c.Reason
+		}
+	}
+	// shouldn't happen
+	return "Unknown", "NodeStatusUnknown"
 }
 
 func (h *Handler) caclulateTaints(instance *corev1.Node) (*corev1.Node, taintChanges, error) {
