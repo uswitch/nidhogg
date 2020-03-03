@@ -117,8 +117,8 @@ func (h *Handler) HandleNode(instance *corev1.Node) (reconcile.Result, error) {
 		} else {
 			firstTimeReady = nodeCopy.Annotations[annotationFirstTimeReady]
 		}
-	} else if copy.Annotations != nil {
-		firstTimeReady = copy.Annotations[annotationFirstTimeReady]
+	} else if nodeCopy.Annotations != nil {
+		firstTimeReady = nodeCopy.Annotations[annotationFirstTimeReady]
 	}
 
 	if !reflect.DeepEqual(nodeCopy, instance) {
