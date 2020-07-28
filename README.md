@@ -18,7 +18,7 @@ Example:
 YAML:
 ```yaml
 nodeSelector:
-  node-role.kubernetes.io/node: ""
+  node-role.kubernetes.io/node
 daemonsets:
   - name: kiam
     namespace: kube-system  
@@ -27,9 +27,11 @@ JSON:
 
 ```json
 {
-  "nodeSelector": {
-    "node-role.kubernetes.io/node": ""
-  },
+  "nodeSelector": [
+    "node-role.kubernetes.io/node",
+    "!node-role.kubernetes.io/master",
+    "aws.amazon.com/ec2.asg.name in (standard, special)"
+  ],
   "daemonsets": [
     {
       "name": "kiam",
@@ -38,8 +40,10 @@ JSON:
   ]
 }
 ```
-This example will taint any nodes that have the label `node-role.kubernetes.io/node=""` if they do not have a running and ready pod from the `kiam` daemonset in the `kube-system` namespace.
-It will add a taint of `nidhogg.uswitch.com/kube-system.kiam:NoSchedule` until there is a ready kiam pod on the node.
+This example will select any nodes in AWS ASGs named "standard" or "special" that have the label 
+`node-role.kubernetes.io/node` present, and no nodes with label `node-role.kubernetes.io/master`. If the matching nodes 
+do not have a running and ready pod from the `kiam` daemonset in the `kube-system` namespace. It will add a taint of 
+`nidhogg.uswitch.com/kube-system.kiam:NoSchedule` until there is a ready kiam pod on the node.
 
 If you want pods to be able to run on the nidhogg tainted nodes you can add a toleration:
 

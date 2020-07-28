@@ -102,9 +102,9 @@ metadata:
 data:
   config.json: |
      {
-       "nodeSelector": {
-         "node-role.kubernetes.io/node": ""
-       },
+       "nodeSelector": [
+         "node-role.kubernetes.io/node"
+       ],
        "daemonsets": [
          {
            "name": "kiam",
