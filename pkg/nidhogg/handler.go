@@ -66,16 +66,17 @@ type HandlerConfig struct {
 	Selector     labels.Selector
 }
 
-func (hc *HandlerConfig) BuildSelectors() {
+func (hc *HandlerConfig) BuildSelectors() error {
 	hc.Selector = labels.Everything()
 	for _, rawSelector := range hc.NodeSelector {
 		if selector, err := labels.Parse(rawSelector); err != nil {
-			panic(err)
+			return fmt.Errorf("error parsing selector: %v", err)
 		} else {
 			requirements, _ := selector.Requirements()
 			hc.Selector = hc.Selector.Add(requirements...)
 		}
 	}
+	return nil
 }
 
 // Daemonset contains the name and namespace of a Daemonset
