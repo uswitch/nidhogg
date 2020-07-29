@@ -67,7 +67,6 @@ type HandlerConfig struct {
 }
 
 func (hc *HandlerConfig) BuildSelectors() {
-	print("test")
 	hc.Selector = labels.Everything()
 	for _, rawSelector := range hc.NodeSelector {
 		if selector, err := labels.Parse(rawSelector); err != nil {
