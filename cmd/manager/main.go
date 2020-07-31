@@ -55,6 +55,8 @@ func main() {
 		os.Exit(1)
 	}
 
+	log.Info("looking for nodes that match selector", handlerConf.Selector.String())
+
 	// Get a config to talk to the apiserver
 	log.Info("setting up client for manager")
 	cfg, err := config.GetConfig()

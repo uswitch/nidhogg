@@ -61,8 +61,22 @@ type Handler struct {
 
 // HandlerConfig contains the options for Nidhogg
 type HandlerConfig struct {
-	Daemonsets   []Daemonset       `json:"daemonsets" yaml:"daemonsets"`
-	NodeSelector map[string]string `json:"nodeSelector" yaml:"nodeSelector"`
+	Daemonsets   []Daemonset `json:"daemonsets" yaml:"daemonsets"`
+	NodeSelector []string    `json:"nodeSelector" yaml:"nodeSelector"`
+	Selector     labels.Selector
+}
+
+func (hc *HandlerConfig) BuildSelectors() error {
+	hc.Selector = labels.Everything()
+	for _, rawSelector := range hc.NodeSelector {
+		if selector, err := labels.Parse(rawSelector); err != nil {
+			return fmt.Errorf("error parsing selector: %v", err)
+		} else {
+			requirements, _ := selector.Requirements()
+			hc.Selector = hc.Selector.Add(requirements...)
+		}
+	}
+	return nil
 }
 
 // Daemonset contains the name and namespace of a Daemonset
@@ -87,8 +101,7 @@ func (h *Handler) HandleNode(instance *corev1.Node) (reconcile.Result, error) {
 	log := logf.Log.WithName("nidhogg")
 
 	//check whether node matches the nodeSelector
-	selector := labels.SelectorFromSet(h.config.NodeSelector)
-	if !selector.Matches(labels.Set(instance.Labels)) {
+	if !h.config.Selector.Matches(labels.Set(instance.Labels)) {
 		return reconcile.Result{}, nil
 	}
 

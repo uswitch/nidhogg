@@ -47,7 +47,10 @@ func TestReconcile(t *testing.T) {
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 	c = mgr.GetClient()
 
-	recFn, requests := SetupTestReconcile(newReconciler(mgr, nidhogg.HandlerConfig{}))
+	handler := nidhogg.HandlerConfig{}
+	handler.BuildSelectors()
+
+	recFn, requests := SetupTestReconcile(newReconciler(mgr, handler))
 	g.Expect(add(mgr, recFn)).NotTo(gomega.HaveOccurred())
 
 	stopMgr, mgrStopped := StartTestManager(mgr, g)

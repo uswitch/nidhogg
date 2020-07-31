@@ -21,6 +21,10 @@ func GetConfig(config string) (HandlerConfig, error) {
 		return HandlerConfig{}, fmt.Errorf("error parsing file: %v", err)
 	}
 
+	if err := handlerConf.BuildSelectors(); err != nil {
+		return HandlerConfig{}, err
+	}
+
 	return handlerConf, nil
 
 }
