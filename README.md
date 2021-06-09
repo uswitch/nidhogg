@@ -11,18 +11,20 @@ Nidhogg was built using [Kubebuilder](https://github.com/kubernetes-sigs/kubebui
 ## Usage
 
 Nidhogg requires a yaml/json config file to tell it what Daemonsets to watch and what nodes to act on.
-`nodeSelector` is a map of keys/values corresponding to node labels. `daemonsets` is an array of Daemonsets to watch, each containing two fields `name` and `namespace`. Nodes are tainted with taint that follows the format of `nidhogg.uswitch.com/namespace.name:NoSchedule`.
+`nodeSelector` is a map of keys/values corresponding to node labels. `daemonsets` is an array of Daemonsets to watch, each containing two mandatory fields `name` and `namespace` and one optional field `effect` (the effect will be set to `NoSchedule` by default). Nodes are tainted with taint that follows the format of `nidhogg.uswitch.com/{namespace}.{name}:{effect}`.
 
 Example:
 
 YAML:
+
 ```yaml
-nodeSelector:
-  node-role.kubernetes.io/node
+nodeSelector: node-role.kubernetes.io/node
 daemonsets:
   - name: kiam
-    namespace: kube-system  
+    namespace: kube-system
+    effect: NoSchedule # default value, can be omitted
 ```
+
 JSON:
 
 ```json
@@ -40,9 +42,10 @@ JSON:
   ]
 }
 ```
-This example will select any nodes in AWS ASGs named "standard" or "special" that have the label 
-`node-role.kubernetes.io/node` present, and no nodes with label `node-role.kubernetes.io/master`. If the matching nodes 
-do not have a running and ready pod from the `kiam` daemonset in the `kube-system` namespace. It will add a taint of 
+
+This example will select any nodes in AWS ASGs named "standard" or "special" that have the label
+`node-role.kubernetes.io/node` present, and no nodes with label `node-role.kubernetes.io/master`. If the matching nodes
+do not have a running and ready pod from the `kiam` daemonset in the `kube-system` namespace. It will add a taint of
 `nidhogg.uswitch.com/kube-system.kiam:NoSchedule` until there is a ready kiam pod on the node.
 
 If you want pods to be able to run on the nidhogg tainted nodes you can add a toleration:
@@ -50,17 +53,19 @@ If you want pods to be able to run on the nidhogg tainted nodes you can add a to
 ```yaml
 spec:
   tolerations:
-  - key: nidhogg.uswitch.com/kube-system.kiam
-    operator: "Exists"
-    effect: NoSchedule
+    - key: nidhogg.uswitch.com/kube-system.kiam
+      operator: "Exists"
+      effect: NoSchedule
 ```
 
 ## Deploying
+
 Docker images can be found at https://quay.io/uswitch/nidhogg
 
-Example [Kustomize](https://github.com/kubernetes-sigs/kustomize) manifests can be found  [here](/config) to quickly deploy this to a cluster.
+Example [Kustomize](https://github.com/kubernetes-sigs/kustomize) manifests can be found [here](/config) to quickly deploy this to a cluster.
 
 ## Flags
+
 ```
 -config-file string
     Path to config file (default "config.json")
@@ -77,3 +82,7 @@ Example [Kustomize](https://github.com/kubernetes-sigs/kustomize) manifests can 
 -metrics-addr string
     The address the metric endpoint binds to. (default ":8080")
 ```
+
+## GKE Preemptible Nodes Support
+
+If you are using Nidhogg on GKE with preemptible nodes, make sure to set `effect:NoExecute` for the DaemonSets. This is required because when a node gets preempted and comes back online, the pods will already be scheduled on it, therefore the `effect:NoSchedule` will not prevent pods without a toleration to start running.
