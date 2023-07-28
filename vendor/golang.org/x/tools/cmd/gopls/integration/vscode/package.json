@@ -24,7 +24,7 @@
     },
     "extensionDependencies": [],
     "dependencies": {
-        "vscode-languageclient": "~4.3.0"
+        "vscode-languageclient": "~4.4.2"
     },
     "devDependencies": {
         "@types/mocha": "^5.2.5",
