@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
-FROM golang:1.11 AS build
+FROM golang:1.21rc3 AS build
 LABEL maintainer "golang-dev@googlegroups.com"
 
 # BEGIN deps (run `make update-deps` to update)
@@ -158,6 +158,6 @@ COPY . /go/src/golang.org/x/net/
 
 RUN go install -tags "h2demo netgo" golang.org/x/net/http2/h2demo
 
-FROM golang:1.11
+FROM golang:1.21rc3
 COPY --from=build /go/bin/h2demo /h2demo
 
