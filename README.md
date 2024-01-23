@@ -1,3 +1,7 @@
+🚨 ⚠️THIS PROJECT IS NOW BEING ABANDONED ⚠️ 🚨
+
+We are only a small team and we don't have the capacity to maintain a tool we don't use anymore, so from now on we will be moving this project to Abandoned. Thank you to all the external contributors who have helped Nidhogg grow over the years.
+
 # Nidhogg
 
 Nidhogg is a controller that taints nodes based on whether a Pod from a specific Daemonset is running on them.
