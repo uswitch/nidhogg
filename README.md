@@ -1,6 +1,12 @@
-🚨 ⚠️THIS PROJECT IS NOW BEING ABANDONED ⚠️ 🚨
+🚨 THIS REPO IS NOW BEING ABANDONED 🚨
 
-We are only a small team and we don't have the capacity to maintain a tool we don't use anymore, so from now on we will be moving this project to Abandoned. Thank you to all the external contributors who have helped Nidhogg grow over the years.
+⚠️⚠️⚠️⚠️⚠️⚠️ Please read ⚠️⚠️⚠️⚠️⚠️⚠️
+
+If you are interested in using a maintened fork of this repo, please use [pelotech-nidhogg](https://github.com/pelotech/nidhogg), the fork that the engineering team at Polotech have kindly agreed to maintain.
+
+⚠️⚠️⚠️⚠️⚠️⚠️ END of please read ⚠️⚠️⚠️⚠️⚠️⚠️
+
+We are only a small team and we don't have the capacity to maintain a tool we don't use anymore, so from now on we will be moving this repo to Abandoned but we are happy that a team like the one at Pelotech is investing in this solution and giving back to the open source community by maintaining an active fork. 
 
 # Nidhogg
 
