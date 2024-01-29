@@ -2,7 +2,9 @@
 
 ⚠️⚠️⚠️⚠️⚠️⚠️ Please read ⚠️⚠️⚠️⚠️⚠️⚠️
 
-If you are interested in using a maintened fork of this repo, please use [pelotech-nidhogg](https://github.com/pelotech/nidhogg), the fork that the engineering team at Polotech have kindly agreed to maintain.
+If you are interested in using a maintened fork of this repo, please use [pelotech-nidhogg](https://github.com/pelotech/nidhogg), the fork that the engineering team at Pelotech have kindly agreed to maintain.
+
+See [this issue for more details](https://github.com/uswitch/nidhogg/issues/43)
 
 ⚠️⚠️⚠️⚠️⚠️⚠️ END of please read ⚠️⚠️⚠️⚠️⚠️⚠️
 
