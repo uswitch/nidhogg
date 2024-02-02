@@ -1,4 +1,4 @@
-FROM golang:latest
+FROM golang:1.22rc2-bookworm
 
 ENV SHELL /bin/bash
 ENV HOME /root
