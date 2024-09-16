@@ -79,10 +79,11 @@ func (hc *HandlerConfig) BuildSelectors() error {
 	return nil
 }
 
-// Daemonset contains the name and namespace of a Daemonset
+// Daemonset contains the name and namespace of a Daemonset. Also includes the effect to set for the taint.
 type Daemonset struct {
-	Name      string `json:"name" yaml:"name"`
-	Namespace string `json:"namespace" yaml:"namespace"`
+	Name      string             `json:"name" yaml:"name"`
+	Namespace string             `json:"namespace" yaml:"namespace"`
+	Effect    corev1.TaintEffect `json:"effect,omitempty" yaml:"effect,omitempty"`
 }
 
 type taintChanges struct {
@@ -159,7 +160,7 @@ func (h *Handler) HandleNode(instance *corev1.Node) (reconcile.Result, error) {
 }
 
 func (h *Handler) calculateTaints(instance *corev1.Node) (*corev1.Node, taintChanges, error) {
-
+	log := logf.Log.WithName("nidhogg")
 	nodeCopy := instance.DeepCopy()
 
 	var changes taintChanges
@@ -181,20 +182,22 @@ func (h *Handler) calculateTaints(instance *corev1.Node) (*corev1.Node, taintCha
 			return nil, taintChanges{}, fmt.Errorf("error fetching pods: %v", err)
 		}
 
-		if pod != nil && podReady(pod) {
+		if pod != nil && podReady(pod) && nodeReady(nodeCopy) {
 			// if the taint is in the taintsToRemove map, it'll be removed
 			continue
 		}
+		log.Info(fmt.Sprintf("Pod does not exist or is not ready, or node is not ready"))
 		// pod doesn't exist or is not ready
 		_, ok := taintsToRemove[taint]
 		if ok {
 			// we want to keep this already existing taint on it
+			log.Info(fmt.Sprintf("Keeping taint %s", taint))
 			delete(taintsToRemove, taint)
 			continue
 		}
 		// taint is not already present, adding it
 		changes.taintsAdded = append(changes.taintsAdded, taint)
-		nodeCopy.Spec.Taints = addTaint(nodeCopy.Spec.Taints, taint)
+		nodeCopy.Spec.Taints = addTaint(nodeCopy.Spec.Taints, taint, daemonset.Effect)
 	}
 	for taint := range taintsToRemove {
 		nodeCopy.Spec.Taints = removeTaint(nodeCopy.Spec.Taints, taint)
@@ -225,16 +228,34 @@ func (h *Handler) getDaemonsetPod(nodeName string, ds Daemonset) (*corev1.Pod, e
 }
 
 func podReady(pod *corev1.Pod) bool {
+	log := logf.Log.WithName("nidhogg")
 	for _, status := range pod.Status.ContainerStatuses {
 		if status.Ready == false {
+			log.Info(fmt.Sprintf("Pod %s is not ready", pod.Name))
 			return false
 		}
 	}
+	log.Info(fmt.Sprintf("Pod %s is ready", pod.Name))
 	return true
 }
 
-func addTaint(taints []corev1.Taint, taintName string) []corev1.Taint {
-	return append(taints, corev1.Taint{Key: taintName, Effect: corev1.TaintEffectNoSchedule})
+func nodeReady(node *corev1.Node) bool {
+	log := logf.Log.WithName("nidhogg")
+	for _, condition := range node.Status.Conditions {
+		if condition.Type == corev1.NodeReady && condition.Status == corev1.ConditionFalse {
+			log.Info(fmt.Sprintf("Node %s is not ready", node.Name))
+			return false
+		}
+	}
+	log.Info(fmt.Sprintf("Node %s is ready", node.Name))
+	return true
+}
+
+func addTaint(taints []corev1.Taint, taintName string, effect corev1.TaintEffect) []corev1.Taint {
+	if effect == "" {
+		effect = corev1.TaintEffectNoSchedule
+	}
+	return append(taints, corev1.Taint{Key: taintName, Effect: effect})
 }
 
 func removeTaint(taints []corev1.Taint, taintName string) []corev1.Taint {
