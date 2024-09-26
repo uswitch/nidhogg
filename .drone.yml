@@ -4,7 +4,7 @@ workspace:
 
 pipeline:
   test:
-    image: golang:1.13
+    image: golang:1.18
     commands:
       - curl -L -O "https://github.com/kubernetes-sigs/kubebuilder/releases/download/v1.0.8/kubebuilder_1.0.8_linux_amd64.tar.gz"
       - tar -zxvf kubebuilder_1.0.8_linux_amd64.tar.gz
